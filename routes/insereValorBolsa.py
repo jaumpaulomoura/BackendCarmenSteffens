@@ -28,7 +28,7 @@ def inserir_dados(lista_de_dados):
                 :MAOOBRA22,
                 :RETENCAO,
                 :PRECO,
-                :DTVIGENCIA
+                to_date(:DTVIGENCIA, 'dd/mm/yyyy')
             )
         ''', [
             {

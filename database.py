@@ -4,7 +4,7 @@ from flask_sqlalchemy import SQLAlchemy
 
 oracle_user = "PRODUCAO"
 oracle_password = "a"
-oracle_host = "192.168.1.62:1521/chbtst"
+oracle_host = "192.168.1.62:1521/chbprd"
 
 oracle_user_loja = "PRODUCAO"
 oracle_password_loja = "a"

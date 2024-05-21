@@ -15,6 +15,7 @@ from routes.limpaBordero import LimpaBordero
 from routes.importVenc import ImportVenc
 from routes.grupoPecista import GrupoPecista
 from routes.bancaSapato import BancaSapato
+from routes.autBolsa import AutBolsa
 from database import create_app
 
 app, db = create_app()
@@ -33,6 +34,7 @@ app.register_blueprint(LimpaBordero, name='limpaBordero')
 app.register_blueprint(ImportVenc, name='importVenc')
 app.register_blueprint(GrupoPecista, name='grupoPecista')
 app.register_blueprint(BancaSapato, name='bancaSapato')
+app.register_blueprint(AutBolsa, name='autBolsa')
 
 
 if __name__ == '__main__':

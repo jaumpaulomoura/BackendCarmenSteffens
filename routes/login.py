@@ -6,7 +6,6 @@ login_bp = Blueprint('login', __name__)
 @login_bp.route('/api/login', methods=['POST'])
 def login():
     app = current_app
-    # Importe local para evitar a dependência circular
     from app import app
 
     data = request.get_json()
