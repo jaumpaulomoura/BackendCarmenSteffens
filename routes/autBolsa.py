@@ -4,7 +4,8 @@ from datetime import datetime, timedelta
 
 AutBolsa = Blueprint('autBolsa', __name__)
 
-def fetch_data_for_date(cursor, data_atual_formatada):
+def fetch_data_for_date(cursor, data_atual_formatada, notNf=None, inNf=None):
+
     
             query_notas = """
             SELECT distinct
@@ -113,11 +114,46 @@ def fetch_data_for_date(cursor, data_atual_formatada):
             and F.STATUSNF IN ('OK','COMP')
             AND F.DTREF >= TO_DATE(:data_inicial, 'DD/MM/YYYY') 
             AND F.DTREF <= TO_DATE(:data_final, 'DD/MM/YYYY') 
-            order by 1
+            
+            
             """
+            # if notNf:
+            #     print("Valor de notNf:", notNf)
+            #     print("Condição notNf detectada")
+            #     query_notas += " AND C.FT71CODNF NOT IN (:notNf)"
+                            
+            # if inNf:
+            #     print("Valor de inNf:", inNf)
+            #     print("Condição inNf detectada")
+            #     query_notas += " AND C.FT71CODNF IN (:inNf)"
+                            
+            # query_notas += " ORDER BY 1"  
 
+            # print("Executando a consulta SQL:", query_notas)
 
-            cursor.execute(query_notas, data_inicial=data_atual_formatada, data_final=data_atual_formatada)
+            # if notNf:
+            #     print("Executando consulta com notNf")
+            #     cursor.execute(query_notas, {'data_inicial': data_atual_formatada, 'data_final': data_atual_formatada, 'notNf': notNf})
+            # elif inNf:
+            #     print("Executando consulta com inNf")
+                
+            #     cursor.execute(query_notas, {'data_inicial': data_atual_formatada, 'data_final': data_atual_formatada, 'inNf': inNf})
+            # else:
+            #     print("Executando consulta sem notNf ou inNf")
+            #     cursor.execute(query_notas, {'data_inicial': data_atual_formatada, 'data_final': data_atual_formatada})
+                
+            # notas_result = cursor.fetchall()
+
+       
+            if notNf:
+                query_notas += " AND C.FT71CODNF NOT IN (" + ",".join([f"'{nf}'" for nf in notNf.split(',')]) + ")"
+            if inNf:
+                query_notas += " AND C.FT71CODNF IN (" + ",".join([f"'{nf}'" for nf in inNf.split(',')]) + ")"
+
+            query_notas += " ORDER BY 1"
+            print("Executando a consulta SQL:", query_notas)
+
+            cursor.execute(query_notas, {'data_inicial': data_atual_formatada, 'data_final': data_atual_formatada})
             notas_result = cursor.fetchall()
 
 
@@ -165,7 +201,7 @@ def fetch_data_for_date(cursor, data_atual_formatada):
             order by 1
             """
 
-
+            
             cursor.execute(query_fichas, data_inicial=data_atual_formatada, data_final=data_atual_formatada)
             fichas_result = cursor.fetchall()
 
@@ -372,9 +408,12 @@ def get_query_resultsFichas():
 
         data_inicial_str = request.args.get('data_inicial')
         data_final_str = request.args.get('data_final')
+        notNf = request.args.get('notNf')
+        inNf = request.args.get('inNf')
         data_inicial = datetime.strptime(data_inicial_str, '%d/%m/%Y')
         data_final = datetime.strptime(data_final_str, '%d/%m/%Y')
-
+      
+            
         accumulated_data = []
         header = [
                         'COD_PREST', 'PRESTADOR', 'ANO_FICHA', 'FICHAS', 'DATA_ENV_FICHA', 'HORA_ENV_FICHA',
@@ -387,7 +426,11 @@ def get_query_resultsFichas():
 
         while data_inicial <= data_final:
             data_atual_formatada = data_inicial.strftime('%d/%m/%Y')
-            notas_result, fichas_result = fetch_data_for_date(cursor, data_atual_formatada)
+            if notNf:
+                params = {'data_atual_formatada': data_atual_formatada, 'notNf': notNf}
+            else:
+                params = {'data_atual_formatada': data_atual_formatada, 'notNf': None, 'inNf': inNf}
+            notas_result, fichas_result = fetch_data_for_date(cursor, **params)
             accumulated_data.extend(process_data(notas_result, fichas_result))
             data_inicial += timedelta(days=1)
         
@@ -409,12 +452,11 @@ def get_query_resultsFichas():
             connection.close()
 
 
-
 @AutBolsa.route('/api/autBolsaNf', methods=['GET'])
 def get_query_resultsFichasNf():
     app = current_app
     sql_queryFicha = """SELECT DISTINCT
-                    TRIM(D.FI15NOME)      AS PRESTADOR, F.DTREF       AS DATA_REF, C.FT71CODNF  	AS NOTAS, TRIM(F.MODREF)        AS MOD_REF, (B.FT76QCOM )  AS QTDE
+                    TRIM(D.FI15NOME)      AS PRESTADOR, F.DTREF       AS DATA_REF, C.FT71CODNF  	AS NOTAS, TRIM(F.MODREF)        AS MOD_REF, sum(B.FT76QCOM )  AS QTDE
                     FROM FT76T A
                     INNER JOIN FT76T1 B ON A.FT76CHAVE = B.FT76CHAVE  
                     INNER JOIN FT71t C ON B.FT76CHAVE = C.FT71CHAVE
@@ -425,6 +467,7 @@ def get_query_resultsFichasNf():
                     AND F.DTREF >= to_date(:data_inicial, 'dd/mm/yyyy')  
                     AND F.DTREF <= to_date(:data_final, 'dd/mm/yyyy') 
                     and F.STATUSNF IN ('OK','COMP')
+                    group by (D.FI15NOME), F.DTREF, C.FT71CODNF, TRIM(F.MODREF)
     """
     
     data_inicial = request.args.get('data_inicial')
